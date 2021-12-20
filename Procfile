@@ -1,1 +1,1 @@
-web: python colabctl.py
+web: python colabctl.py end 1800
