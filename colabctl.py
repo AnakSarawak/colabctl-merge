@@ -120,20 +120,13 @@ if len(colab_urls) > 0 and validators.url(colab_urls[0]):
 else:
     raise Exception('No notebooks')
 
-
-chrome_options = webdriver.ChromeOptions()
+chrome_options = Options()
 chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--no-sandbox")
-wd = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
-
-#chrome_options = Options()
-#chrome_options.add_argument('--headless') # uncomment for headless mode
-#chrome_options.add_argument('--no-sandbox')
+chrome_options.add_argument('--headless') # uncomment for headless mode
+chrome_options.add_argument('--no-sandbox')
 #chrome_options.add_argument("user-data-dir=profile") # left for debugging
-#chrome_options.add_argument('--disable-dev-shm-usage')
-#wd = webdriver.Chrome('chromedriver', options=chrome_options)
+chrome_options.add_argument('--disable-dev-shm-usage')
+wd = webdriver.Chrome('chromedriver', options=chrome_options)
 
 wd.get(colab_1)
 try:
@@ -154,12 +147,17 @@ if exists_by_text(wd, "Sign in"):
     wd = webdriver.Chrome('chromedriver', options=chrome_options_gui)
     wd.get("https://accounts.google.com/signin")
     wait_for_xpath(wd, '//*[@id="yDmH0d"]')
+    wd.find_element_by_name("identifier").send_keys("supp8255@gmail.com")
+    wd.find_element_by_xpath("//*[@id='identifierNext']/div/button/span").click()
+    wd.implicitly_wait(4)
+    wd.find_element_by_name("password").send_keys("supp123456")
+    wd.find_element_by_xpath("//*[@id='passwordNext']/div/button/span").click()
     print("Login detected. Saving cookie & restarting connection.")
+    time.sleep(5)
     pickle.dump(wd.get_cookies(), open("gCookies.pkl", "wb"))
-    wd.close()
-    wd.quit()
-    wd = webdriver.Chrome('chromedriver', options=chrome_options)
-while True:
+    complete = False
+
+while (complete == False):
     for colab_url in colab_urls:
         complete = False
         wd.get(colab_url)
@@ -168,55 +166,51 @@ while True:
         wait_for_xpath(wd, '//*[@id="file-menu-button"]/div/div/div[1]')
         print('Notebook loaded.')
         sleep(10)
-        
-        while not exists_by_text(wd, "Sign in"):
+
+        while (running == False):
             if exists_by_text(wd, "Runtime disconnected"):
                 try:
-                    wd.find_element(By.XPATH, '//*[@id="ok"]').click()
+                    wd.find_element_by_xpath('//*[@id="ok"]').click()
                 except NoSuchElementException:
                     pass
             if exists_by_text2(wd, "Notebook loading error"):
                 wd.get(colab_url)
             try:
-                wd.find_element(By.XPATH, '//*[@id="file-menu-button"]/div/div/div[1]')
                 if not running:
-                    wd.find_element(By.TAG_NAME, 'body').send_keys(Keys.CONTROL + Keys.SHIFT + "q")
-                    wd.find_element(By.TAG_NAME, 'body').send_keys(Keys.CONTROL + Keys.SHIFT + "k")
-                    if (exists_by_xpath(wd, '//*[@id="ok"]', 10)):
-                        wd.find_element(By.XPATH, '//*[@id="ok"]').click()
-                    sleep(10)
-                    wd.find_element(By.TAG_NAME, 'body').send_keys(Keys.CONTROL + Keys.F9)
+                    sleep(5)
+                    wd.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.F9)
                     running = True
             except NoSuchElementException:
                 pass
             if running:
-                try:
-                    wd.find_element(By.CSS_SELECTOR, '.notebook-content-background').click()
-                    #actions = ActionChains(wd)
-                    #actions.send_keys(Keys.SPACE).perform()
-                    scroll_to_bottom(wd)
-                    print("performed scroll")
-                except:
-                    pass
-                for frame in wd.find_elements(By.TAG_NAME, 'iframe'):
-                    wd.switch_to.frame(frame)
-                    '''
-                    links = browser.find_elements_by_partial_link_text('oauth2/auth')
-                    for link in links:
-                        new_tab(wd, link.get_attribute("href"), 1)
-                        wd.find_element_by_css_selector('li.M8HEDc:nth-child(1)>div:nth-child(1)').click()
-                        wd.find_element_by_css_selector('#submit_approve_access>content:nth-child(3)>span:nth-child(1)').click()
-                        auth_code = wd.find_element_by_xpath('/html/body/div[1]/div[1]/div[2]/div[2]/div/div/div[2]/div/div/div/form/content/section/div/content/div/div/div/textarea').text
-                    '''
-                    for output in wd.find_elements(By.TAG_NAME, 'pre'):
-                        if fork in output.text:
-                            running = False
-                            complete = True
-                            print("Completion string found. Waiting for next cycle.")
-                            break
-                    wd.switch_to.default_content()
-                    if complete:
+                link = wd.find_element_by_partial_link_text("https://accounts.google.com/o/oauth2")
+                new_tab(wd, link.get_attribute("href"), 1)
+                wd.find_element_by_css_selector('li.JDAKTe.ibdqA.W7Aapd.zpCp3.SmR8').click()
+                time.sleep(2)
+                wd.find_element_by_css_selector('#submit_approve_access > div > button').click()
+                auth_code = wd.find_element_by_css_selector('#view_container > div > div > div.pwWryf.bxPAYd > div > div.WEQkZc > div > form > span > section > div > div > div > span > div > textarea').text
+                switch_to_tab(wd,0)
+                wd.find_element_by_class_name("raw_input").send_keys(auth_code)
+                actions = ActionChains(wd)
+                actions.send_keys(Keys.ENTER).perform()
+                if exists_by_text(wd,"Permit this notebook to access your Google Drive files?"):
+                    try:
+                        connect = wd.find_element_by_xpath('//*[@id="ok"]').click()
+                        new_tab(wd, connect.get_attribute("href"), 1)
+                        wd.find_element_by_css_selector('li.JDAKTe.ibdqA.W7Aapd.zpCp3.SmR8').click()
+                        time.sleep(2)
+                        wd.find_element_by_css_selector('#submit_approve_access > div > button').click()
+                    except NoSuchElementException:
+                        pass
+                scroll_to_bottom(wd)
+                for output in wd.find_elements_by_tag_name('pre'):
+                    if fork in output.text:
+                        running = False
+                        complete = True
                         break
+                wd.switch_to.default_content()
                 if complete:
                     break
-    sleep(timeout)
+            if complete:
+                break
+wd.quit()
