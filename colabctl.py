@@ -178,28 +178,35 @@ while (complete == False):
             try:
                 if not running:
                     sleep(5)
+                    wd.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.SHIFT + Keys.F9)
                     wd.find_element_by_tag_name('body').send_keys(Keys.CONTROL + Keys.F9)
                     running = True
             except NoSuchElementException:
                 pass
             if running:
-                link = wd.find_element_by_partial_link_text("https://accounts.google.com/o/oauth2")
-                new_tab(wd, link.get_attribute("href"), 1)
-                wd.find_element_by_css_selector('li.JDAKTe.ibdqA.W7Aapd.zpCp3.SmR8').click()
                 time.sleep(2)
-                wd.find_element_by_css_selector('#submit_approve_access > div > button').click()
-                auth_code = wd.find_element_by_css_selector('#view_container > div > div > div.pwWryf.bxPAYd > div > div.WEQkZc > div > form > span > section > div > div > div > span > div > textarea').text
-                switch_to_tab(wd,0)
-                wd.find_element_by_class_name("raw_input").send_keys(auth_code)
-                actions = ActionChains(wd)
-                actions.send_keys(Keys.ENTER).perform()
+                try:
+                    link = wd.find_element_by_partial_link_text("https://accounts.google.com/o/oauth2")
+                    new_tab(wd, link.get_attribute("href"), 1)
+                    wd.find_element_by_css_selector('li.JDAKTe.ibdqA.W7Aapd.zpCp3.SmR8').click()
+                    wd.find_element_by_css_selector('#submit_approve_access > div > button').click()
+                    auth_code = wd.find_element_by_css_selector('#view_container > div > div > div.pwWryf.bxPAYd > div > div.WEQkZc > div > form > span > section > div > div > div > span > div > textarea').text
+                    switch_to_tab(wd,0)
+                    wd.find_element_by_class_name("raw_input").send_keys(auth_code)
+                    actions = ActionChains(wd)
+                    actions.send_keys(Keys.ENTER).perform()
+                    time.sleep(2)
+                except NoSuchElementException:
+                    pass
                 if exists_by_text(wd,"Permit this notebook to access your Google Drive files?"):
                     try:
                         connect = wd.find_element_by_xpath('//*[@id="ok"]').click()
-                        new_tab(wd, connect.get_attribute("href"), 1)
+                        window_before = wd.window_handles[0]
+                        window_after = wd.window_handles[1]
+                        wd.switch_to_window(window_after)
                         wd.find_element_by_css_selector('li.JDAKTe.ibdqA.W7Aapd.zpCp3.SmR8').click()
-                        time.sleep(2)
                         wd.find_element_by_css_selector('#submit_approve_access > div > button').click()
+                        time.sleep(1)
                     except NoSuchElementException:
                         pass
                 scroll_to_bottom(wd)
